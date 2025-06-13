@@ -4,6 +4,6 @@ using UnityEngine;
 
 public class BuildingFootprint : MonoBehaviour
 {
-    public int width = 1;  // Number of tiles wide
-    public int height = 1; // Number of tiles tall
+    public int width = 1;
+    public int height = 1;
 }

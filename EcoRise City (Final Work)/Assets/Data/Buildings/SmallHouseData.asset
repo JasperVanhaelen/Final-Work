@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c38fd22e6eb302a4f81cbed86da9a808, type: 3}
+  m_Name: SmallHouseData
+  m_EditorClassIdentifier: 
+  buildingName: Small House
+  prefab: {fileID: 7185425074152406182, guid: 13ffd8c8ed3435241899720920995b09, type: 3}
+  icon: {fileID: 21300000, guid: 69e885d2385c25045bed1dd30c0c628a, type: 3}
+  cost: 300
+  energyType: 2
+  energyAmount: 2
+  populationAmount: 3
+  ecoScoreImpact: 0

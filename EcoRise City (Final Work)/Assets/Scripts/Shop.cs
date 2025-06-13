@@ -1,36 +1,50 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
-using System.Collections.Generic; // <-- Needed for HashSet<T>
-using TMPro;
+using System.Collections.Generic;
 
 public class Shop : MonoBehaviour
 {
+    [Header("UI References")]
     public GameObject shopPanel;
     public Button openShopButton;
     public Button closeShopButton;
 
-    public GameObject building1Prefab;
-    public GameObject building2Prefab;
+    [Header("UI Elements")]
+    public GameObject energyUI;
+
+    [Header("Gameplay References")]
+    public Grid tilemapGrid;
+    public CoinManager coinManager;
+    public AudioSource sfxSource;
+    public AudioClip placeSound;
+
+    [Header("Available Buildings")]
+    public List<BuildingData> buildings;
 
     private GameObject currentDraggedBuilding;
     private Camera mainCamera;
-
-    public Grid tilemapGrid;
-
     private bool isDraggingBuilding = false;
-
     private HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int>();
-
     private Dictionary<SpriteRenderer, Color> originalColors = new Dictionary<SpriteRenderer, Color>();
 
-    public CoinManager coinManager; // drag your CoinManager GameObject in the Inspector
+    private BuildingData currentBuildingData;
 
     private void Start()
     {
         mainCamera = Camera.main;
-        openShopButton.onClick.AddListener(OpenShop);
-        closeShopButton.onClick.AddListener(CloseShop);
+
+        openShopButton.onClick.AddListener(() =>
+        {
+            shopPanel.SetActive(true);
+            energyUI.SetActive(false);
+        });
+
+        closeShopButton.onClick.AddListener(() =>
+        {
+            shopPanel.SetActive(false);
+            energyUI.SetActive(true);
+        });
+
     }
 
     private void Update()
@@ -44,10 +58,8 @@ public class Shop : MonoBehaviour
             Vector3Int originCell = tilemapGrid.WorldToCell(worldPos);
             currentDraggedBuilding.transform.position = tilemapGrid.GetCellCenterWorld(originCell);
 
-            // Get all the tiles the building would occupy
             List<Vector3Int> cellsToOccupy = GetOccupiedCells(originCell, currentDraggedBuilding);
 
-            // Check if any of them are already occupied
             bool canPlace = true;
             foreach (var cell in cellsToOccupy)
             {
@@ -60,11 +72,10 @@ public class Shop : MonoBehaviour
 
             SetGhostColor(currentDraggedBuilding, canPlace ? Color.green : Color.red);
 
-            // On release
             if ((Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Ended)
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
                 || Input.GetMouseButtonUp(0)
-    #endif
+#endif
             )
             {
                 if (canPlace)
@@ -73,67 +84,89 @@ public class Shop : MonoBehaviour
                     {
                         occupiedCells.Add(cell);
                     }
-                    FinalizePlacement(); // Lock it in
+                    FinalizePlacement();
                 }
                 else
                 {
-                    // Cancel placement
-                    Destroy(currentDraggedBuilding);
-                    currentDraggedBuilding = null;
-                    isDraggingBuilding = false;
-                    TouchCamera.IsCameraLocked = false;
+                    CancelPlacement();
                 }
             }
         }
     }
 
-    public void OnBeginDragBuilding1()
+    public void OnBeginDragBuilding(BuildingData data)
     {
-        if (building1Prefab != null)
-        {
-            int cost = building1Prefab.GetComponent<BuildingCost>().cost;
+        currentBuildingData = data;
 
-            if (coinManager.CurrentCoins >= cost)
-            {
-                currentDraggedBuilding = Instantiate(building1Prefab);
-                SetGhostMode(currentDraggedBuilding);
-                isDraggingBuilding = true;
-                TouchCamera.IsCameraLocked = true;
-            }
-            else
-            {
-                Debug.Log("Not enough coins for Building 1.");
-            }
+        if (coinManager.CurrentCoins >= data.cost)
+        {
+            currentDraggedBuilding = Instantiate(data.prefab);
+            SetGhostMode(currentDraggedBuilding);
+            isDraggingBuilding = true;
+            TouchCamera.IsCameraLocked = true;
+        }
+        else
+        {
+            Debug.Log("Not enough coins for: " + data.buildingName);
         }
     }
 
-    public void OnBeginDragBuilding2()
+    private void FinalizePlacement()
     {
-        if (building2Prefab != null)
+        MakeSolid(currentDraggedBuilding);
+        var costComp = currentDraggedBuilding.GetComponent<BuildingCost>();
+        if (costComp != null)
         {
-            int cost = building2Prefab.GetComponent<BuildingCost>().cost;
-
-            if (coinManager.CurrentCoins >= cost)
+            coinManager.SpendCoins(costComp.cost);
+        }
+    
+        isDraggingBuilding = false;
+        currentDraggedBuilding = null;
+        TouchCamera.IsCameraLocked = false;
+        sfxSource.PlayOneShot(placeSound);
+    
+        if (currentBuildingData != null)
+        {
+            // Energy logic
+            switch (currentBuildingData.energyType)
             {
-                currentDraggedBuilding = Instantiate(building2Prefab);
-                SetGhostMode(currentDraggedBuilding);
-                isDraggingBuilding = true;
-                TouchCamera.IsCameraLocked = true;
+                case EnergyType.Producer:
+                    EnergyManager.Instance.AddEnergy(currentBuildingData.energyAmount);
+                    break;
+                case EnergyType.Consumer:
+                    EnergyManager.Instance.ConsumeEnergy(currentBuildingData.energyAmount);
+                    break;
             }
-            else
+    
+            // NEW: Population and Eco Score logic
+            if (currentBuildingData.populationAmount > 0)
             {
-                Debug.Log("Not enough coins for Building 1.");
+                StatsManager.Instance.AddPopulation(currentBuildingData.populationAmount);
+            }
+    
+            if (currentBuildingData.ecoScoreImpact != 0)
+            {
+                StatsManager.Instance.AddEcoScore(currentBuildingData.ecoScoreImpact);
             }
         }
+    
+        currentBuildingData = null;
+    }
+
+    private void CancelPlacement()
+    {
+        Destroy(currentDraggedBuilding);
+        currentDraggedBuilding = null;
+        isDraggingBuilding = false;
+        TouchCamera.IsCameraLocked = false;
     }
 
     private List<Vector3Int> GetOccupiedCells(Vector3Int originCell, GameObject building)
     {
         List<Vector3Int> cells = new List<Vector3Int>();
-    
         var footprint = building.GetComponent<BuildingFootprint>();
         if (footprint == null) return cells;
-    
+
         for (int x = 0; x < footprint.width; x++)
         {
             for (int y = 0; y < footprint.height; y++)
@@ -142,51 +175,26 @@ public class Shop : MonoBehaviour
                 cells.Add(cell);
             }
         }
-    
+
         return cells;
-    }
-
-    private void FinalizePlacement()
-    {
-        if (currentDraggedBuilding != null)
-        {
-            MakeSolid(currentDraggedBuilding);
-        }
-
-        if (currentDraggedBuilding != null)
-    {
-        var costComp = currentDraggedBuilding.GetComponent<BuildingCost>();
-        if (costComp != null)
-        {
-            coinManager.SpendCoins(costComp.cost);
-        }
-    }
-    
-        isDraggingBuilding = false;
-        currentDraggedBuilding = null;
-        TouchCamera.IsCameraLocked = false;
-    }
-
-    private void OpenShop()
-    {
-        shopPanel.SetActive(true);
-    }
-
-    private void CloseShop()
-    {
-        shopPanel.SetActive(false);
     }
 
     private void SetGhostMode(GameObject building)
     {
-        originalColors.Clear(); // Clear from previous building
-
-        var renderers = building.GetComponentsInChildren<SpriteRenderer>();
-        foreach (var renderer in renderers)
+        originalColors.Clear();
+        foreach (var renderer in building.GetComponentsInChildren<SpriteRenderer>())
         {
             originalColors[renderer] = renderer.color;
+            Color ghost = renderer.color;
+            ghost.a = 0.5f;
+            renderer.color = ghost;
+        }
+    }
 
-            Color color = renderer.color;
+    private void SetGhostColor(GameObject building, Color color)
+    {
+        foreach (var renderer in building.GetComponentsInChildren<SpriteRenderer>())
+        {
             color.a = 0.5f;
             renderer.color = color;
         }
@@ -194,34 +202,21 @@ public class Shop : MonoBehaviour
 
     private void MakeSolid(GameObject building)
     {
-        var renderers = building.GetComponentsInChildren<SpriteRenderer>();
-        foreach (var renderer in renderers)
+        foreach (var renderer in building.GetComponentsInChildren<SpriteRenderer>())
         {
-            if (originalColors.ContainsKey(renderer))
+            if (originalColors.TryGetValue(renderer, out Color original))
             {
-                Color color = originalColors[renderer];
-                color.a = 1f;
-                renderer.color = color;
+                original.a = 1f;
+                renderer.color = original;
             }
             else
             {
-                // fallback in case we missed one
-                Color color = renderer.color;
-                color.a = 1f;
-                renderer.color = color;
+                Color fallback = renderer.color;
+                fallback.a = 1f;
+                renderer.color = fallback;
             }
         }
-    
-        originalColors.Clear(); // Clear after applying
-    }
 
-    private void SetGhostColor(GameObject building, Color color)
-    {
-        var renderers = building.GetComponentsInChildren<SpriteRenderer>();
-        foreach (var renderer in renderers)
-        {
-            color.a = 0.5f; // still semi-transparent
-            renderer.color = color;
-        }
+        originalColors.Clear();
     }
 }
