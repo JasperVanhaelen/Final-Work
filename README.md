@@ -1,6 +1,6 @@
 # 🌆 EcoRise City (Unity)
 
-Welcome to my **City Builder Game**, a Unity-based simulation where players grow and manage a thriving city.
+Welcome to my **City Builder Game**, a Unity-based simulation where players grow and manage a thriving city, with a focus on environmentally conscious choices.
 
 ---
 
