@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using System;
 
 public class StatsManager : MonoBehaviour
 {
@@ -11,6 +12,8 @@ public class StatsManager : MonoBehaviour
     [Header("UI")]
     public TextMeshProUGUI populationText;
     public TextMeshProUGUI ecoScoreText;
+
+    public static event Action<int> OnEcoScoreChanged;
 
     private void Awake()
     {
@@ -28,12 +31,20 @@ public class StatsManager : MonoBehaviour
     {
         CurrentPopulation += amount;
         UpdateUI();
+
+        // Update mission progress with the new total population
+        MissionManager.Instance.UpdateProgress(MissionType.ReachPopulation, CurrentPopulation);
     }
 
     public void AddEcoScore(int amount)
     {
         CurrentEcoScore += amount;
         UpdateUI();
+
+        // Update mission progress with the new total eco score
+        MissionManager.Instance.UpdateProgress(MissionType.ReachEcoScore, CurrentEcoScore);
+
+        OnEcoScoreChanged?.Invoke(CurrentEcoScore); // Notify listeners
     }
 
     private void UpdateUI()

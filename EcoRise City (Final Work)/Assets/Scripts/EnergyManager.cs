@@ -33,17 +33,50 @@ public class EnergyManager : MonoBehaviour
     {
         currentEnergy += amount;
         UpdateUI();
+        UpdateBuildingVisuals();
     }
 
     public void ConsumeEnergy(int amount)
     {
         neededEnergy += amount;
         UpdateUI();
+        UpdateBuildingVisuals();
     }
 
     private void UpdateUI()
     {
         currentEnergyText.text = $"Producing: {currentEnergy}";
         neededEnergyText.text = $"Needed: {neededEnergy}";
+    }
+
+    public bool IsInDeficit()
+    {
+        return neededEnergy > currentEnergy;
+    }
+
+    public void UpdateBuildingVisuals()
+    {
+        foreach (GameObject building in Shop.placedBuildings)
+        {
+            bool isHouse = building.CompareTag("House");
+            var spriteRenderers = building.GetComponentsInChildren<SpriteRenderer>();
+
+            if (IsInDeficit() && isHouse)
+            {
+                // Grey it out
+                foreach (var sr in spriteRenderers)
+                {
+                    sr.color = Color.gray;
+                }
+            }
+            else if (isHouse)
+            {
+                // Restore normal
+                foreach (var sr in spriteRenderers)
+                {
+                    sr.color = Color.white;
+                }
+            }
+        }
     }
 }

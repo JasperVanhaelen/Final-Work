@@ -7,7 +7,7 @@ public class CoinManager : MonoBehaviour
     private int coins;
 
     private const string CoinKey = "PlayerCoins";
-    private const int StartingCoins = 500;
+    private const int StartingCoins = 1300;
 
     public int CurrentCoins => coins; // read-only property
 

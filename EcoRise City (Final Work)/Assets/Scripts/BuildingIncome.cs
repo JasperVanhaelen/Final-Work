@@ -14,8 +14,10 @@ public class BuildingIncome : MonoBehaviour
 
     void Update()
     {
+        if (EnergyManager.Instance.IsInDeficit()) return;
+
         incomeTimer += Time.deltaTime;
-        if (incomeTimer >= 60f) // Every 60 seconds
+        if (incomeTimer >= 60f)
         {
             coinManager.AddCoins(incomePerMinute);
             incomeTimer = 0f;

@@ -8,6 +8,8 @@ public class Shop : MonoBehaviour
     public GameObject shopPanel;
     public Button openShopButton;
     public Button closeShopButton;
+    public GameObject lockedTxt;
+    public GameObject noCoinsTxt;
 
     [Header("UI Elements")]
     public GameObject energyUI;
@@ -28,6 +30,8 @@ public class Shop : MonoBehaviour
     private Dictionary<SpriteRenderer, Color> originalColors = new Dictionary<SpriteRenderer, Color>();
 
     private BuildingData currentBuildingData;
+
+    public static List<GameObject> placedBuildings = new List<GameObject>();
 
     private void Start()
     {
@@ -98,6 +102,14 @@ public class Shop : MonoBehaviour
     {
         currentBuildingData = data;
 
+        // Check if unlocked
+        if (StatsManager.Instance.CurrentEcoScore < data.requiredEcoScore)
+        {
+            ShowLockedMessage();
+            return;
+        }
+
+        // Check if enough coins
         if (coinManager.CurrentCoins >= data.cost)
         {
             currentDraggedBuilding = Instantiate(data.prefab);
@@ -107,7 +119,7 @@ public class Shop : MonoBehaviour
         }
         else
         {
-            Debug.Log("Not enough coins for: " + data.buildingName);
+            ShowNoCoinsMessage(); // <--- Use this instead of Debug.Log
         }
     }
 
@@ -119,12 +131,13 @@ public class Shop : MonoBehaviour
         {
             coinManager.SpendCoins(costComp.cost);
         }
-    
+
         isDraggingBuilding = false;
-        currentDraggedBuilding = null;
         TouchCamera.IsCameraLocked = false;
-        sfxSource.PlayOneShot(placeSound);
-    
+
+        // Add to list BEFORE visual updates can happen
+        Shop.placedBuildings.Add(currentDraggedBuilding);
+
         if (currentBuildingData != null)
         {
             // Energy logic
@@ -137,19 +150,28 @@ public class Shop : MonoBehaviour
                     EnergyManager.Instance.ConsumeEnergy(currentBuildingData.energyAmount);
                     break;
             }
-    
-            // NEW: Population and Eco Score logic
+
             if (currentBuildingData.populationAmount > 0)
             {
                 StatsManager.Instance.AddPopulation(currentBuildingData.populationAmount);
             }
-    
+
             if (currentBuildingData.ecoScoreImpact != 0)
             {
                 StatsManager.Instance.AddEcoScore(currentBuildingData.ecoScoreImpact);
             }
         }
-    
+
+        if (currentBuildingData.isTree)
+        {
+            MissionManager.Instance.UpdateProgress(MissionType.PlantTrees,
+                MissionManager.Instance.GetCurrentProgress(MissionType.PlantTrees) + 1);
+        }
+
+        sfxSource.PlayOneShot(placeSound);
+
+        // Null out after using it
+        currentDraggedBuilding = null;
         currentBuildingData = null;
     }
 
@@ -218,5 +240,35 @@ public class Shop : MonoBehaviour
         }
 
         originalColors.Clear();
+    }
+
+    private void ShowLockedMessage()
+    {
+        if (lockedTxt == null) return;
+
+        lockedTxt.SetActive(true);
+        CancelInvoke(nameof(HideLockedMessage)); // Avoid overlap if clicked multiple times
+        Invoke(nameof(HideLockedMessage), 5f);   // Hide after 5 seconds
+    }
+
+    private void HideLockedMessage()
+    {
+        if (lockedTxt != null)
+            lockedTxt.SetActive(false);
+    }
+    
+    private void ShowNoCoinsMessage()
+    {
+        if (noCoinsTxt == null) return;
+
+        noCoinsTxt.SetActive(true);
+        CancelInvoke(nameof(HideNoCoinsMessage));
+        Invoke(nameof(HideNoCoinsMessage), 3f); // Show for 3 seconds
+    }
+
+    private void HideNoCoinsMessage()
+    {
+        if (noCoinsTxt != null)
+            noCoinsTxt.SetActive(false);
     }
 }

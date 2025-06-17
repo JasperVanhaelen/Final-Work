@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c38fd22e6eb302a4f81cbed86da9a808, type: 3}
   m_Name: PatagoniaData
   m_EditorClassIdentifier: 
+  isTree: 0
   buildingName: Patagonia
   prefab: {fileID: 8900557957073799278, guid: 17e42ed046e4ed74f82abfcf1da03bd8, type: 3}
   icon: {fileID: 21300000, guid: 6787211edeb4916489c417ab5e3ddfb5, type: 3}
@@ -20,3 +21,4 @@ MonoBehaviour:
   energyAmount: 4
   populationAmount: 0
   ecoScoreImpact: 2
+  requiredEcoScore: 35
