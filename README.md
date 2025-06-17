@@ -70,3 +70,11 @@ Balance your economy, population, and energy to build the most efficient and suc
 ## 👤 Author
 
 **Jasper Vanhaelen**
+
+---
+
+## 📚 Sources & Credits
+
+- 🤖 Game making and scripting guidance with the help of **ChatGPT by OpenAI**
+- 🎨 Some UI elements like buttons used from [https://assetstore.unity.com/packages/2d/gui/puzzle-stage-settings-gui-pack-147389]
+
