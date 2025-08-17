@@ -14,6 +14,11 @@ public class MissionManager : MonoBehaviour
     public Button openMissionsButton;
     public Button closeMissionsButton;
 
+    [Header("Mission Complete Popup")]
+    public GameObject completePopup;
+    public TextMeshProUGUI completeTxt;
+    public Button popupCloseBtn;
+
     [Header("Game References")]
     public CoinManager coinManager; // Add reference to coin-handling script
 
@@ -48,13 +53,15 @@ public class MissionManager : MonoBehaviour
 
         openMissionsButton.onClick.AddListener(OpenPanel);
         closeMissionsButton.onClick.AddListener(ClosePanel);
+        popupCloseBtn.onClick.AddListener(ClosePopup);
+
     }
 
     void InitializeMissions()
     {
         allMissions = new List<Mission>() {
-            new Mission { description = "Plant 5 trees", type = MissionType.PlantTrees, targetAmount = 5, reward = 200 },
-            new Mission { description = "Reach population of 10", type = MissionType.ReachPopulation, targetAmount = 10, reward = 200 },
+            new Mission { description = "Plant 5 trees", type = MissionType.PlantTrees, targetAmount = 5, reward = 300 },
+            new Mission { description = "Reach population of 10", type = MissionType.ReachPopulation, targetAmount = 10, reward = 400 },
             new Mission { description = "Obtain eco-score of 15", type = MissionType.ReachEcoScore, targetAmount = 15, reward = 400 },
             new Mission { description = "Plant 10 trees", type = MissionType.PlantTrees, targetAmount = 10, reward = 400 },
             new Mission { description = "Reach population of 25", type = MissionType.ReachPopulation, targetAmount = 25, reward = 800 },
@@ -109,6 +116,8 @@ public class MissionManager : MonoBehaviour
     {
         progressData[type] = newAmount;
 
+        List<Mission> justCompleted = new List<Mission>();
+
         foreach (var mission in allMissions)
         {
             if (mission.isActive && !mission.isCompleted && mission.type == type)
@@ -117,12 +126,19 @@ public class MissionManager : MonoBehaviour
                 {
                     mission.isCompleted = true;
                     coinManager.AddCoins(mission.reward);
+                    justCompleted.Add(mission);
                 }
             }
         }
 
-        CheckSetCompletion();
-        RefreshUI();
+        // Show popups after all completions are processed
+        foreach (var mission in justCompleted)
+        {
+            ShowPopup($"Mission Complete:\n{mission.description}\n+{mission.reward} Coins");
+        }
+
+        CheckSetCompletion(); // Now okay to advance to next set
+        RefreshUI(); // Refresh after completion and popup
     }
 
     void RefreshUI()
@@ -162,6 +178,17 @@ public class MissionManager : MonoBehaviour
     void ClosePanel()
     {
         missionsPanel.SetActive(false);
+    }
+
+    void ShowPopup(string message)
+    {
+        completeTxt.text = message;
+        completePopup.SetActive(true);
+    }
+
+    void ClosePopup()
+    {
+        completePopup.SetActive(false);
     }
     
     public int GetCurrentProgress(MissionType type)

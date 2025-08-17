@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c38fd22e6eb302a4f81cbed86da9a808, type: 3}
+  m_Name: SmallparkData
+  m_EditorClassIdentifier: 
+  isTree: 1
+  buildingName: Tree
+  prefab: {fileID: 6400231843325225701, guid: 45a13d7414e8f93408b247a9778ea04d, type: 3}
+  icon: {fileID: 21300000, guid: c634acd33490a4e468eae58e3b80abff, type: 3}
+  cost: 100
+  energyType: 0
+  energyAmount: 0
+  populationAmount: 0
+  ecoScoreImpact: 5
+  requiredEcoScore: -99

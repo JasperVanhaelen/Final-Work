@@ -21,4 +21,4 @@ MonoBehaviour:
   energyAmount: 9
   populationAmount: 0
   ecoScoreImpact: 5
-  requiredEcoScore: 0
+  requiredEcoScore: -99

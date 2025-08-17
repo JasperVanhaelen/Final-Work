@@ -20,6 +20,12 @@ public class Shop : MonoBehaviour
     public AudioSource sfxSource;
     public AudioClip placeSound;
 
+    [Header("Placement FX")]
+    public GameObject placementFXPrefab;
+
+    [Header("Placement Highlight")]
+    public PlacementHighlighter placementHighlighter; // Tilemap overlay
+
     [Header("Available Buildings")]
     public List<BuildingData> buildings;
 
@@ -48,22 +54,28 @@ public class Shop : MonoBehaviour
             shopPanel.SetActive(false);
             energyUI.SetActive(true);
         });
-
     }
 
     private void Update()
     {
         if (isDraggingBuilding && currentDraggedBuilding != null)
         {
-            Vector3 screenPos = Input.touchCount > 0 ? (Vector3)Input.GetTouch(0).position : Input.mousePosition;
+            // 1. Get mouse/touch world position
+            Vector3 screenPos = Input.touchCount > 0 ? 
+                (Vector3)Input.GetTouch(0).position : 
+                Input.mousePosition;
+
             Vector3 worldPos = mainCamera.ScreenToWorldPoint(screenPos);
             worldPos.z = 0f;
 
+            // 2. Snap to grid
             Vector3Int originCell = tilemapGrid.WorldToCell(worldPos);
             currentDraggedBuilding.transform.position = tilemapGrid.GetCellCenterWorld(originCell);
 
+            // 3. Get occupied cells from footprint
             List<Vector3Int> cellsToOccupy = GetOccupiedCells(originCell, currentDraggedBuilding);
 
+            // 4. Check if placement is valid
             bool canPlace = true;
             foreach (var cell in cellsToOccupy)
             {
@@ -74,8 +86,13 @@ public class Shop : MonoBehaviour
                 }
             }
 
+            // 5. Show highlight overlay
+            placementHighlighter?.Show(cellsToOccupy, canPlace);
+
+            // 6. Tint ghost sprite
             SetGhostColor(currentDraggedBuilding, canPlace ? Color.green : Color.red);
 
+            // 7. Finalize placement on release
             if ((Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Ended)
 #if UNITY_EDITOR
                 || Input.GetMouseButtonUp(0)
@@ -85,9 +102,8 @@ public class Shop : MonoBehaviour
                 if (canPlace)
                 {
                     foreach (var cell in cellsToOccupy)
-                    {
                         occupiedCells.Add(cell);
-                    }
+
                     FinalizePlacement();
                 }
                 else
@@ -119,18 +135,17 @@ public class Shop : MonoBehaviour
         }
         else
         {
-            ShowNoCoinsMessage(); // <--- Use this instead of Debug.Log
+            ShowNoCoinsMessage();
         }
     }
 
     private void FinalizePlacement()
     {
         MakeSolid(currentDraggedBuilding);
+
         var costComp = currentDraggedBuilding.GetComponent<BuildingCost>();
         if (costComp != null)
-        {
             coinManager.SpendCoins(costComp.cost);
-        }
 
         isDraggingBuilding = false;
         TouchCamera.IsCameraLocked = false;
@@ -152,27 +167,36 @@ public class Shop : MonoBehaviour
             }
 
             if (currentBuildingData.populationAmount > 0)
-            {
                 StatsManager.Instance.AddPopulation(currentBuildingData.populationAmount);
-            }
 
             if (currentBuildingData.ecoScoreImpact != 0)
-            {
                 StatsManager.Instance.AddEcoScore(currentBuildingData.ecoScoreImpact);
+
+            if (currentBuildingData.isTree)
+            {
+                MissionManager.Instance.UpdateProgress(
+                    MissionType.PlantTrees,
+                    MissionManager.Instance.GetCurrentProgress(MissionType.PlantTrees) + 1
+                );
             }
         }
 
-        if (currentBuildingData.isTree)
-        {
-            MissionManager.Instance.UpdateProgress(MissionType.PlantTrees,
-                MissionManager.Instance.GetCurrentProgress(MissionType.PlantTrees) + 1);
-        }
-
+        // Play placement sound
         sfxSource.PlayOneShot(placeSound);
 
-        // Null out after using it
+        // Play placement animation (FX_Dig)
+        if (placementFXPrefab != null)
+        {
+            Vector3 fxPosition = currentDraggedBuilding.transform.position;
+            GameObject fxInstance = Instantiate(placementFXPrefab, fxPosition, Quaternion.identity);
+            Destroy(fxInstance, 2f);
+        }
+
+        // Null out after using
         currentDraggedBuilding = null;
         currentBuildingData = null;
+
+        placementHighlighter?.Hide();
     }
 
     private void CancelPlacement()
@@ -181,20 +205,21 @@ public class Shop : MonoBehaviour
         currentDraggedBuilding = null;
         isDraggingBuilding = false;
         TouchCamera.IsCameraLocked = false;
+
+        placementHighlighter?.Hide();
     }
 
     private List<Vector3Int> GetOccupiedCells(Vector3Int originCell, GameObject building)
     {
-        List<Vector3Int> cells = new List<Vector3Int>();
-        var footprint = building.GetComponent<BuildingFootprint>();
-        if (footprint == null) return cells;
+        var cells = new List<Vector3Int>();
+        var fp = building.GetComponent<BuildingFootprint>();
+        if (fp == null) return cells;
 
-        for (int x = 0; x < footprint.width; x++)
+        for (int x = 0; x < fp.width; x++)
         {
-            for (int y = 0; y < footprint.height; y++)
+            for (int y = 0; y < fp.height; y++)
             {
-                Vector3Int cell = new Vector3Int(originCell.x + x, originCell.y + y, originCell.z);
-                cells.Add(cell);
+                cells.Add(new Vector3Int(originCell.x + x, originCell.y + y, originCell.z));
             }
         }
 
@@ -238,7 +263,6 @@ public class Shop : MonoBehaviour
                 renderer.color = fallback;
             }
         }
-
         originalColors.Clear();
     }
 
@@ -247,8 +271,8 @@ public class Shop : MonoBehaviour
         if (lockedTxt == null) return;
 
         lockedTxt.SetActive(true);
-        CancelInvoke(nameof(HideLockedMessage)); // Avoid overlap if clicked multiple times
-        Invoke(nameof(HideLockedMessage), 5f);   // Hide after 5 seconds
+        CancelInvoke(nameof(HideLockedMessage));
+        Invoke(nameof(HideLockedMessage), 5f);
     }
 
     private void HideLockedMessage()
@@ -256,14 +280,14 @@ public class Shop : MonoBehaviour
         if (lockedTxt != null)
             lockedTxt.SetActive(false);
     }
-    
+
     private void ShowNoCoinsMessage()
     {
         if (noCoinsTxt == null) return;
 
         noCoinsTxt.SetActive(true);
         CancelInvoke(nameof(HideNoCoinsMessage));
-        Invoke(nameof(HideNoCoinsMessage), 3f); // Show for 3 seconds
+        Invoke(nameof(HideNoCoinsMessage), 3f);
     }
 
     private void HideNoCoinsMessage()

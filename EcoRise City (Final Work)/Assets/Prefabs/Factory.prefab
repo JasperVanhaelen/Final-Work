@@ -86,7 +86,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
-  m_SpriteSortPoint: 0
+  m_SpriteSortPoint: 1
 --- !u!114 &-5775723189270259752
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -99,8 +99,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f762a620c27a4446880e0ef3bc74e82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 4
-  height: 4
+  width: 5
+  height: 5
+  anchor: 1
 --- !u!114 &5296264729459615491
 MonoBehaviour:
   m_ObjectHideFlags: 0
